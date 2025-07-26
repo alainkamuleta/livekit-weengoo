@@ -1,0 +1,39 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - weengoo-net
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  coturn:
+    image: instrumentisto/coturn
+    container_name: coturn
+    restart: unless-stopped
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "5349:5349/tcp"
+      - "5349:5349/udp"
+      - "49152-49200:49152-49200/udp" # UDP relay ports
+    environment:
+      - REALM=turn.weengoo.net
+      - LISTENING_PORT=3478
+      - TLS_LISTENING_PORT=5349
+      - TZ=Europe/Paris
+    volumes:
+      - ./certs:/certs:ro
+      - ./secrets:/run/secrets:ro
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+
+networks:
+  weengoo-net:
+    external: true
