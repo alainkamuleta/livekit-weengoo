@@ -1,0 +1,8 @@
+{
+	"sans": [
+		"livekit.weengoo.net"
+	],
+	"issuer_data": {
+		"url": "https://acme-v02.api.letsencrypt.org/acme/cert/05f075be86b562e55080eeb8177ab933a472"
+	}
+}

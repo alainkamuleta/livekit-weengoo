@@ -1,0 +1,34 @@
+# This docker-compose requires host networking, which is only available on Linux
+# This compose will not function correctly on Mac or Windows
+services:
+  livekit:
+    image: livekit/livekit-server
+    container_name: livekit
+    depends_on:
+      - redis
+    ports:
+      - "7880:7880"         # HTTP port
+      - "7881:7881"         # TCP port
+      - "50000-60000:50000-60000/udp"  # UDP media ports
+    volumes:
+      - ./livekit.yaml:/livekit.yaml
+      - ./wait-for-redis.sh:/wait-for-redis.sh
+    entrypoint: ["/bin/sh", "/wait-for-redis.sh"]
+    environment:
+      - LIVEKIT_CONFIG=/livekit.yaml
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server /etc/redis.conf
+    restart: unless-stopped
+    # network_mode: "host"
+    volumes:
+      - ./redis.conf:/etc/redis.conf
+      #- ./redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - weengoo-net
+
+networks:
+  weengoo-net:
+    external: true

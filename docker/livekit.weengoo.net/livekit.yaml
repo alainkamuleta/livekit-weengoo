@@ -1,0 +1,38 @@
+port: 7880
+bind_addresses:
+    - ""
+rtc:
+    tcp_port: 7881
+    port_range_start: 50000
+    port_range_end: 60000
+    use_external_ip: true
+    enable_loopback_candidate: false
+redis:
+    address: redis:6379
+    username: ""
+    password: ""
+    db: 0
+    use_tls: false
+    sentinel_master_name: ""
+    sentinel_username: ""
+    sentinel_password: ""
+    sentinel_addresses: []
+    cluster_addresses: []
+    max_redirects: null
+#turn:
+#    enabled: true
+#    domain: turn.meriba.net
+#    tls_port: 5349
+#    udp_port: 3478
+#    external_tls: true
+turn:
+  enabled: false
+  domain: turn.meriba.net
+  # serveur TURN externe
+  # urls:
+  #  - turn:turn.meriba.net:3478?transport=udp
+  #  - turn:turn.meriba.net:3478?transport=tcp
+  # secret: 5QFIrE5vIneRTWyqAx4OtSthS2jc7IDz1bVS23cwJP7sihMgxGmXJEe2n0lxEUL9pIQQqHN9M5fQfshnxW2pNvrpf4Dz0uILW0zshjDKmvYIRDJfYrt9jTpSeEfGVH0U6HPP7>
+  # LiveKit ne fait que signer les credentials, pas d'authentification directe avec le TURN
+keys:
+    APIRg27CSH8QJKS: EH9k5b0wbAetbAz743OloXVw6uftPwLwye6eZNzWVJPB
