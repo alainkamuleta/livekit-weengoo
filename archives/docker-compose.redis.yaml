@@ -1,24 +1,19 @@
 services:
   redis:
     image: redis:7-alpine
-    restart: unless-stopped
     container_name: redis
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - weengoo-net
     volumes:
-      - redis-data:/data
-    #volumes:
-    #  - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s
       timeout: 2s
       retries: 20
 
-
 networks:
   weengoo-net:
     external: true
-
-volumes:
-  redis-data:

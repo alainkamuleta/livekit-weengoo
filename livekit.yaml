@@ -9,16 +9,19 @@ rtc:
   use_external_ip: true
 
 redis:
-  address: redis:6379
+  address: localhost:6379
   db: 0
   use_tls: false
 
 turn:
-  enabled: false
-  urls:
-    - turn:turn.weengoo.net:3478?transport=udp
-  secret: 5QFIrE5vIneRTWyqAx4OtSthS2jc7IDz1bVS23cwJP7sihMgxGmXJEe2n0lxEUL9pIQQqHN9M5fQfshnxW2pNvrpf4Dz0uILW0zshjDKmvYIRDJfYrt9jTpSeEfGVH0U6HPP7PCJmj0HNPj3MixwvKddsVDtrSIBsV64UhJwmXp3e5GTEg3PvJn6NTGYii16NOse8sCuk6sRGN4pYahhR6BtpTXbzRkEilhD4enQnB69Qzl7kHgOLPtTrAeupO66
-  credentials_ttl: 300
+    enabled: true
+    domain: turn.weengoo.net
+    tls_port: 5349
+    udp_port: 3478
+    cert_file: /home/alain/livekit-weengoo/certs/turn.crt
+    key_file: /home/alain/livekit-weengoo/certs/turn.key
+    # secret: IneRTWyqAx4OtSthS2jc5QFIrE5vIneRTWyqAx4OtSthS2jc7IDz1bVS23cwJthS2jc5QFIrE
+    # credentials_ttl: 300
 
 keys:
   APIo9NHV7gBiwcf: ZnaddCRseDvRA9L3VUu0Bya4HAtDHfxeVj9Mn84Ky5IA

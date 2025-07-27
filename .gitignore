@@ -1,0 +1,27 @@
+# Certificats privés (ne jamais versionner)
+certs/
+*.pem
+*.key
+*.crt
+
+# Fichiers système
+*.swp
+*.swo
+*.bak
+.DS_Store
+
+# Docker volumes (facultatif)
+volumes/
+
+# Logs
+*.log
+
+# Systemd units (si générés dynamiquement)
+*.service~
+
+# VSCode / IDEs
+.vscode/
+.idea/
+
+# Node modules or other package caches
+node_modules/

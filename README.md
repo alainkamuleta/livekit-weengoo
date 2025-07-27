@@ -1,137 +1,128 @@
-# LiveKit Weengoo Infrastructure
+# LiveKit Infrastructure – MimosaCall / Weengoo
 
-This repo contains Docker Compose setups for:
-- LiveKit server (livekit.weengoo.net)
-- Redis (local)
-- TURN server (turn.weengoo.net)
-- All services connect via a shared Docker network `weengoo-net`
-- Nginx reverse proxy with Let's Encrypt (configured separately)
+## 🌍 Infrastructure Overview
 
-## Start services
+| Serveur              | Rôle                                   | IP              | Nom(s) de domaine             |
+|----------------------|----------------------------------------|------------------|-------------------------------|
+| **vps-weengoo (ext)**| Reverse proxy + TLS + déploiement cert | 54.36.103.240    | livekit.weengoo.net, turn.weengoo.net |
+| **livekit-lxc (int)**| LiveKit + TURN + Redis                 | 192.168.4.103    | interne derrière pfSense      |
 
-docker network create weengoo-net
-docker compose -f docker-compose.redis.yaml up -d
-docker compose -f docker-compose.turn.yaml up -d
-docker compose -f docker-compose.livekit.yaml up -d
+## 🔐 Certificats TLS
 
-
-## Notes
-- TURN secret must match in both `turnserver.conf` and `livekit.yaml`
-- Ports 3478, 7880-7881, 50000-60000/udp must be open
-
-
-Commit et push
-
-git add .
-git commit -m "Initial Docker setup for LiveKit, Redis, TURN"
-git push origin main
-
-
-----------------------------------------------------------
-INFRASTRUCTURE D3X LIVEKIT
-----------------------------
-
-# Architecture de l'infrastructure LiveKit + TURN
-
-## Vue d'ensemble
-
-L'infrastructure est hébergée sur un seul serveur public (IP : `54.36.103.240`) et se compose des éléments suivants :
-
-### 1. Nginx Reverse Proxy + Certbot (Natif)
-
-- Nginx agit comme reverse proxy HTTPS pour d'autres services (LiveKit n'en dépend pas directement).
-- Certbot gère les certificats TLS via Let's Encrypt.
-- Le certificat pour TURN est renouvelé automatiquement avec un hook personnalisé.
-
-### 2. Services Docker dans `/home/alain/livekit-weengoo/docker-compose.yaml`
-
-- **Redis**
-  - Exposé localement sur le port `6379`
-  - Utilisé par LiveKit comme base de données temporaire
-- **Coturn (TURN server)**
-  - Ports exposés : `3478` TCP+UDP et `5349` TCP (TLS)
-  - Certificat TLS utilisé : fourni par Certbot via `/etc/letsencrypt/live/turn.weengoo.net`
-
-### 3. Certificat TLS pour TURN
-
-- Certbot gère les certificats dans `/etc/letsencrypt/live/turn.weengoo.net/`
-- Script de déploiement automatique :
-  ```bash
-  /etc/letsencrypt/renewal-hooks/deploy/deploy-turn.sh
-  ```
-- Ce script copie les fichiers TLS (certificat + clé privée) dans le conteneur Coturn (via volume ou `docker cp`) ou dans un répertoire surveillé par Coturn, puis redémarre le service.
-
-### 4. LiveKit (Natif)
-
-- Installé dans `/home/alain/livekit-weengoo/livekit`
-- Mode de lancement : via `systemd`
-- Fichier de service : `/etc/systemd/system/livekit.service`
-
-Exemple de contenu du fichier :
-
-```ini
-[Unit]
-Description=LiveKit SFU
-After=network.target docker.service
-
-[Service]
-User=alain
-WorkingDirectory=/home/alain/livekit-weengoo
-ExecStart=/home/alain/livekit-weengoo/livekit --config /home/alain/livekit-weengoo/livekit.yaml
-Restart=on-failure
-LimitNOFILE=4096
-
-[Install]
-WantedBy=multi-user.target
-```
-
-## Configuration des ports (pare-feu)
-
-Assurez-vous que les ports suivants sont ouverts sur le pare-feu (UFW, iptables, etc.) :
-
-- `3478` TCP/UDP
-- `5349` TCP
-- `6379` (local uniquement si Redis est en local)
-- Ports définis dans la config `livekit.yaml` (par défaut HTTP 7880, UDP 50000-60000)
+- Certificats Let's Encrypt générés sur le serveur public `54.36.103.240` via Certbot.
+- Déploiement automatique vers `/home/alain/livekit-weengoo/certs/` sur `192.168.4.103` via script hook `deploy-turn.sh`.
 
 ---
 
-## Déploiement GitHub
+## 🚀 Installation des composants
 
-Pour versionner cette infrastructure sur GitHub :
+### 1. LiveKit Server (sur 192.168.4.103)
 
-### 1. Initialiser un dépôt
+#### 📁 Arborescence :
+/home/alain/livekit-weengoo/
+├── certs/                   # contient turn.crt / turn.key
+├── deploy-turn-cert.sh      # copie les certs de Let's Encrypt localement
+├── docker-compose.yaml      # pour Redis
+├── livekit.yaml             # configuration LiveKit
+├── redis.conf               # config redis
+└── livekit.service          # service systemd
 
+#### ⚙️ Fichier `livekit.yaml` (extrait) :
+```yaml
+port: 7880
+rtc:
+  udp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: true
+
+redis:
+  address: localhost:6379
+  db: 0
+  use_tls: false
+
+turn:
+  enabled: true
+  domain: turn.weengoo.net
+  tls_port: 5349
+  udp_port: 3478
+  cert_file: /home/alain/livekit-weengoo/certs/turn.crt
+  key_file: /home/alain/livekit-weengoo/certs/turn.key
+
+keys:
+  APIo9NHV7gBiwcf: ZnaddCRseDvRA9L3VUu0Bya4HAtDHfxeVj9Mn84Ky5IA
+```
+
+#### 🧠 Lancement :
+```bash
+# Redis
+docker compose -f docker-compose.yaml up -d
+
+# LiveKit
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable --now livekit
+```
+
+---
+
+### 2. Certbot & Déploiement TLS (sur 54.36.103.240)
+
+#### 📁 Fichiers :
+/etc/letsencrypt/renewal-hooks/deploy/deploy-turn.sh  
+/home/alain/livekit-weengoo/deploy-turn-cert.sh
+
+#### 📝 Script `deploy-turn-cert.sh`
+```bash
+#!/bin/bash
+
+CERT_SRC="/etc/letsencrypt/live/turn.weengoo.net"
+CERT_DST="/home/alain/livekit-weengoo/certs"
+
+install -m 644 "$CERT_SRC/fullchain.pem" "$CERT_DST/turn.crt"
+install -m 600 "$CERT_SRC/privkey.pem" "$CERT_DST/turn.key"
+```
+
+#### 📝 Hook `/etc/letsencrypt/renewal-hooks/deploy/deploy-turn.sh`
+```bash
+#!/bin/bash
+/home/alain/livekit-weengoo/deploy-turn-cert.sh
+```
+
+---
+
+## 📡 Reverse Proxy (sur 54.36.103.240)
+
+Via Nginx, les domaines suivants sont redirigés :
+- `https://livekit.weengoo.net` → `http://192.168.4.103:7880`
+- `turn.weengoo.net:5349` → redirigé directement vers port Docker ou local
+
+---
+
+## 🔁 Renouvellement automatique TLS
+
+```bash
+sudo certbot renew --dry-run
+```
+
+---
+
+## 🐙 Déploiement sur GitHub
+
+### 1. Configure ton dépôt
 ```bash
 cd /home/alain/livekit-weengoo
 git init
-git remote add origin git@github.com:<votre_user>/livekit-weengoo.git
+git remote add origin git@github.com:ton-utilisateur/livekit-weengoo.git
 ```
 
-### 2. Ajouter les fichiers importants
+### 2. Ajoute un `.gitignore`
+Voir fichier `.gitignore` plus haut.
 
+### 3. Commit & push
 ```bash
-git add docker-compose.yaml livekit.yaml deploy-turn.sh README.md
+git add .
+git commit -m "Mise à jour complète de l'infrastructure LiveKit (prod)"
+git branch -M main
+git push -u origin main
 ```
-
-### 3. Commit et push
-
-```bash
-git commit -m "Initial commit: infra LiveKit + TURN + Redis"
-git push -u origin master
-```
-
-> ✉️ **Astuce** : n'oubliez pas d'ajouter un `.gitignore` pour exclure les certificats et fichiers sensibles !
-
-Exemple `.gitignore` :
-
-```
-*.pem
-*.key
-*.crt
-*.log
-.env
-certs/
-```
-
-
