@@ -12,9 +12,9 @@
 
 ### 1. Configure ton dépôt
 ```bash
-cd /home/alain/livekit-weengoo
+cd /home/alain/livekit
 git init
-git remote add origin git@github.com:ton-utilisateur/livekit-weengoo.git
+git remote add origin git@github.com:ton-utilisateur/livekit-example.com.git
 ```
 
 ### 2. Ajoute un `.gitignore`
